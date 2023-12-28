@@ -1,0 +1,34 @@
+#+title: Summery OpenGL
+
+* [[https://learnopengl.com/Getting-started/Hello-Triangle][Chapter 1.4 - Hello Triangle]]
+** Init and shaders
+1. Initialize libraries
+2. source and compile shader
+3. use program
+
+** Vertex Array and Buffer
+1. generate vertex array and bind vertex array
+2. generate vertex buffer object and bind it
+3. glVertexAttribPointer()
+    tell opengl how to parse values in VBO for an attribute
+4. glEnableVertexAttribArray(0)
+    0 for 0th attribute
+    1 for 1st attribute
+
+    An attribute is property of vertex stored in VBO.
+    suppose
+    x,  y,  z,  texX,   texY
+    these 5 values consist your 2 attributes, *coords and texture coords*
+
+    in vertex shader ill have line
+    =layout (location = 0) in vec3 aPos;=
+    here we are saying from VAO choose attribute at location 0
+    we already told opengl what values are in attribute 1 so the values will be copied into shader.
+5. To draw triangle you call =glDrawArrays()=
+   glDrawArrays
+
+** Effiecient way to draw many triangles
+1. generate and bind VAO
+2. generate, bind and add buffer data to VBO
+3. generate, bind and add buffer data to EBO
+4. define attributes and enable them

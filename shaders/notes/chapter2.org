@@ -1,0 +1,376 @@
+#+title:     [[https://learnopengl.com/Lighting/Colors][LearnOpenGL chapter 2 - Lighting]]
+
+* [[https://learnopengl.com/Lighting/Colors][Chapter 2.1 - Colors]]
+When we define a light source in OpenGL we want to give this light source a color. If we would then multiply the light source's color with an object's color value, the resulting color would be the reflected color of the object (and thus its perceived color). Let's revisit our toy (this time with a coral value) and see how we would calculate its perceived color in graphics-land. We get the resulting color vector by doing a component-wise multiplication between the light and object color vectors:
+
+#+begin_src cpp
+glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+glm::vec3 toyColor(1.0f, 0.5f, 0.31f);
+glm::vec3 result = lightColor * toyColor; // = (1.0f, 0.5f, 0.31f);
+#+end_src
+
+We can see that the toy's color absorbs a large portion of the white light, but reflects several red, green and blue values based on its own color value. This is a representation of how colors would work in real life. We can thus define an object's color as the amount of each color component it reflects from a light source. Now what would happen if we used a green light?
+
+#+begin_src cpp
+glm::vec3 lightColor(0.0f, 1.0f, 0.0f);
+glm::vec3 toyColor(1.0f, 0.5f, 0.31f);
+glm::vec3 result = lightColor * toyColor; // = (0.0f, 0.5f, 0.0f);
+#+end_src
+
+As we can see, the toy has no red and blue light to absorb and/or reflect. The toy also absorbs half of the light's green value, but also reflects half of the light's green value. The toy's color we perceive would then be a dark-greenish color. We can see that if we use a green light, only the green color components can be reflected and thus perceived; no red and blue colors are perceived. As a result the coral object suddenly becomes a dark-greenish object. Let's try one more example with a dark olive-green light:
+
+
+** Lighting scene
+The first thing we need is an object to cast the light on and we'll use the infamous container cube from the previous chapters. We'll also be needing a light object to show where the light source is located in the 3D scene. For simplicity's sake we'll represent the light source with a cube as well.
+
+fragment shader should look something like following:
+#+begin_src c
+#version 330 core
+out vec4 FragColor;
+
+uniform vec3 objectColor;
+uniform vec3 lightColor;
+
+void main()
+{
+    FragColor = vec4(lightColor * objectColor, 1.0);
+}
+#+end_src
+
+* [[https://learnopengl.com/Lighting/Basic-Lighting][Chapter 2.2 - Basic lighting]]
+Lighting in the real world is extremely complicated and depends on way too many factors, something we can't afford to calculate on the limited processing power we have. Lighting in OpenGL is therefore based on approximations of reality using simplified models that are much easier to process and look relatively similar. These lighting models are based on the physics of light as we understand it. One of those models is called the *Phong lighting model*. The major building blocks of the Phong lighting model consist of 3 components: *ambient, diffuse and specular lighting*. Below you can see what these lighting components look like on their own and combined
+
+1. Ambient lighting:
+   Even when it is dark there is usually still some light somewhere in the world (the moon, a distant light) so objects are almost never completely dark. To simulate this we use an ambient lighting constant that always gives the *object some color*.
+
+2. Diffuse lighting:
+   *simulates the directional impact a light* object has on an object. This is the most visually significant component of the lighting model. The more a part of an object faces the light source, the brighter it becomes.
+
+3. Specular lighting:
+   simulates the *bright spot of a light that appears on shiny objects*. Specular highlights are more inclined to the color of the light than the color of the object
+
+
+** Ambient Lighting
+we're not big fans of complicated and expensive algorithms we'll start by using a very simplistic model of global illumination, namely ambient lighting. As you've seen in the previous section we use a small constant (light) color that we add to the final resulting color of the object's fragments, thus making it look like there is always some scattered light even when there's not a direct light source
+
+fragment Shader
+#+begin_src c
+void main()
+{
+  float ambientStrength = 0.1;
+  vec3 ambient = ambientStrength * lightColor;
+
+  vec3 result = ambient * objectColor;
+  FragColor = vec4(result, 1.0f);
+}
+
+#+end_src
+
+** Diffuse Lighting
+Ambient lighting by itself doesn't produce the most interesting results, but diffuse lighting however will start to give a significant visual impact on the object. Diffuse lighting gives the object more brightness the closer its fragments are aligned to the light rays from a light source.
+To the left we find a light source with a light ray targeted at a single fragment of our object. We need to measure *at what angle* the light ray touches the fragment.
+If the light ray is perpendicular to the object's surface the light has the greatest impact. To measure the angle between the light ray and the fragment we use something called a *normal vector*, that is a vector perpendicular to the fragment's surface (here depicted as a yellow arrow); we'll get to that later. The angle between the two vectors can then easily be calculated with the dot product.
+
+so to calculate diffuse lighting we need:
+1. Normal vector: a vector perpendicular to vectors surface.
+2. The directed ray of light: a *direction vector* that is different vector between the light's position and the fragment's position.
+   To calculate this ray we need light objects position and fragment's position.
+
+
+*** Normal Vectors.
+Unit Vector perpendicular to surface of a vertex. We pass these coords using VBO
+
+*** Calculating the diffuse color
+We got normal vector
+Now we need lightPosition and fragment's position
+For fragment position, we can multiply the vertex position attribute with model matrix to transform it to world space coordinate.
+
+*** Specular Lighting
+Specular lighting is based on normal vectors but also based on the view direction.
+
+View vector / direction is calculated by viewer's world space position and the fragment's position. Then we can calculate the specular's intensity, multiply this with fragment's pixel values.
+
+
+* [[https://learnopengl.com/Lighting/Materials][Chapter 2.3 - Materials]]
+Well we made lighting look real good but in reality different items reflect light differently.
+
+We create a struct material in fragment shader with material properties;
+
+#+begin_src c
+
+#version 330 core
+struct Material {
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    float shininess;
+};
+
+uniform Material material;
+
+#+end_src
+
+1. Ambient:
+   defines what color the surface reflects under ambient lighting, this is usually same as surface's color.
+2. Diffuse:
+   the diffuse material vector defines the color of the surface under diffuse lighting. The diffuse color is set to desired surface's color.
+3. Specular:
+   the specular material vector sets the color of the specular highlight on the surface.
+4. Shininess:
+   Imapacts the scattering/radius of the specular highlight.
+
+We also make struct Light with same attributes, just without shinniness and with position
+
+#+begin_src c
+
+struct Light {
+    vec3 position;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+
+uniform Light light;
+
+#+end_src
+
+
+* [[https://learnopengl.com/Lighting/Lighting-maps][Chapter 2.4 - Lighting maps]]
+We need diffuse and specular lighting maps because an object is made of multiple objects.
+
+** Diffuse Maps
+What we want is some way to set the diffuse colors to an object for each individual fragment. Some sort of system where we can retrive a color value based on the fragment's position on object.
+
+This sounds just like textures. We are just going to be using different name for same underlaying principle: using an image wrapped around an object that we can index for unique color values per fragment. In lit scenese this is usually called a diffuse map since a texture image represents all the object's diffuse colors.
+
+Using a diffuse map in shaders is exapctly like we showed in the texture chapter. This time however we store the texture as a sampler2D inside the Material struct.
+
+sampler2D is a so called opaque type which means we can't instantiate these types, but only define them as uniforms. If the struct would be instantiated other than as a uniform (like a function parameters) GLSL could throw strange errors.
+
+We also remove the ambient material color vector since the ambient with the light. So there;s no need to store it saperately.
+
+#+begin_src c
+struct Material
+{
+  sampler2D diffuse;
+  vec3      specular;
+  float     shininess;
+};
+...
+in vec2 TexCoords;
+#+end_src
+
+We going to need texture coords again in the fragment shader, so we declared an extra input variable. Then we simply sample from the texture to retrive the fragment's diffuse color value:
+
+#+begin_src cpp
+vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
+
+vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
+#+end_src
+
+** Specular Maps
+Specular map will be different than diffuse.
+
+We can solve this by setting the specular material of the object to vec3(0.0) for wooden part.
+
+We can use a texture map just for specular highlights. This means we need to generate a black and while (or colors if u feel like it) texture that defines the specular intesifies of each part of the object.
+
+The intensity of the specular highlight comes from the brightness of each pixel in the image. Each pixel of the specular map can be displayed as a color vector where black represents the color vector vec3(0.0) and gray the color vec3(0.5). In fragment shader we then sample the corresponding color value and multiply this value with the light's specular intensity.
+
+hence in [[file:~/Codes/OpenGL/assets/container2_specular.png][container2_specular.png]] the part of wood is black as wood won't have any specular lighting
+
+
+** Sampling specular maps
+A specular maps is just like any other texture so the code is similar to diffuse map code.
+
+** Emission map
+Similarly we take map images, in as uniform sampler2D. Then do calculations in fragment shader.
+
+* [[https://learnopengl.com/Lighting/Light-casters][LearnOpenGL 2.5 - Light Casters]]
+Till now we have only seen point light which sends light in all direction.
+We make an direction attribute in Light struct
+
+#+begin_src c
+struct Light {
+    // vec3 position; // no longer necessary when using directional lights.
+    vec3 direction;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+[...]
+void main()
+{
+  vec3 lightDir = normalize(-light.direction);
+  [...]
+}
+#+end_src
+
+Till now we took light direction from fragment, hence we negate light.direction.
+
+** Directional light
+*Directional lights* are great for gloabl lights that *illuminate entire scence*, but we usually also want several point lights scattered thorugout the scene.
+A *point light* is a light source with a given position somewhere in a world that illuminations in *all directions*, where light rays fade out over distance.
+[[file:fading-light.png][Fading Light Image]]
+
+Till now our point light was't fading, but now we want it to fade over distance. This loss of enregy is called *attenuation*.
+
+*** Attenuation
+To reduce the intensity of light over the distance a light ray travels is generally called attenuation.
+lights are generally quite bright standing close by, but the brightness of a light source diminishes quickly at a distance; the remaining light intensity then slowly diminishes over distance.
+
+[[file:attenuation_formula.png][Attenuation formula]] [[file:attenuation_graph.png][Attenuation graph]]
+
+here /d/ represents distance from the fragment to the light source. Then we define,
+1. Kc - constant term - usually kept at 1.0 - there to make sure denomiator doesn't get less than 0.
+2. Kl - linear term - multiplied by distance d
+3. Kq - quadratic term will be less significant compared to the linear term for small distance, but gets much larger as distance increases.
+
+*** Choosing the right values
+[[file:chart.png][Values of terms in Attenuation formula]] this char has different values for different distances.
+Say we want to reach our light till 50 distance, so we take values of 50
+
+*** Implementing attenuation
+
+Let's store these values in light struct
+#+begin_src c
+struct Light {
+    vec3 position;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+
+    float constant;
+    float linear;
+    float quadratic;
+};
+#+end_src
+
+#+begin_src cpp
+lightingShader.setFloat("light.constant",  1.0f);
+lightingShader.setFloat("light.linear",    0.09f);
+lightingShader.setFloat("light.quadratic", 0.032f);
+#+end_src
+
+Implementing attenuation in the fragment shader is relatively straightforward.
+We simply calculate an attenuation value based on eqn and multiply this with ambient, diffuse and specular component
+
+#+begin_src c
+float distance    = length(light.position - FragPos);
+float attenuation = 1.0 / (light.constant + light.linear * distance +
+    		    light.quadratic * (distance * distance));
+
+ambient  *= attenuation;
+diffuse  *= attenuation;
+specular *= attenuation;
+#+end_src
+
+#+begin_quote
+We could leave the ambient component alone so ambient lighting is not decreased over distance, but if we were to use more than 1 light source all the ambient components will start to stack up. In that case we want to attenuate ambient lighting as well. Simply play around with what's best for your environment.
+#+end_quote
+
+** Spotlight
+This light source sends light in only specific direction. The result is that only the object withing a certain radius are lit.
+
+A spotlight in OpenGL is represented by a world-space position, a direction and a cutoff angle that specifies the radius of the spotlight. For each fragment we calculate if the fragment is between the spotlight's cutoff directions (thus in its cone) and if so, we lit the fragment accordingly. The following image gives you an idea of how a spotlight works:
+
+[[file:spotLight.png][Spotlight]]
+
+1. LightDir: the vector pointing from the fragment to the light source.
+2. SpotDir: the direction the spotlight is aiming at.
+3. Phi ϕ : the cutoff angle that specifies the spotlight's radius. Everything outside this angle is not lit by the spotlight.
+4. Theta θ : the angle between the LightDir vector and the SpotDir vector. The θ value should be smaller than Φ to be inside the spotlight.
+
+So what we do now?
+We calculate the dot product b/w LightDir and SpotDir (cos b/w them) and compare this with cutoff angle ϕ.
+If it's in range we calculate light else we don't
+
+#+begin_src c
+struct Light {
+    vec3  position;
+    vec3  direction;
+    float cutOff;
+    ...
+};
+...
+
+#+end_src
+
+#+begin_src cpp
+lightingShader.setVec3("light.position",  camera.Position);
+lightingShader.setVec3("light.direction", camera.Front);
+lightingShader.setFloat("light.cutOff",   glm::cos(glm::radians(12.5f)));
+
+#+end_src
+
+#+begin_src c
+// in main of fragment shader
+float theta = dot(lightDir, normalize(-light.direction));
+
+if(theta > light.cutOff)
+{
+  // do lighting calculations
+}
+else  // else, use ambient light so scene isn't completely dark outside the spotlight.
+  color = vec4(light.ambient * vec3(texture(material.diffuse, TexCoords)), 1.0);
+
+#+end_src
+
+** Smooth/Soft edges
+To create the effect of smoothly-edged spotlight we want to simulate a spotlight having an inner and an outer cone.
+We can set the inner cone as the cone defined in previous section, but we also want an outer that gradually dims the light from inner to the edges of outer cone.
+
+To create an outer cone we simply define another cosine value that represents the angle b/w the spotlight's direction vector and the outer cone's vector. Then, if a fragment is between the inner and outer cone it should calculate an intensity value between 0.0 and 1.0. If the fragment is inside the inner cone its intensity is equal to 1.0 and 0.0 if the fragment is outeside the outer cone.
+
+We cab calculate such value using following eqn:
+[[file:smooth-edge-formula.png][Smooth edge formula]]
+
+Here ϵ (epsilon) is cosine difference b/w the innter (ϕ) and outer cone (γ) (ϵ=ϕ−γ) the resulting I value is intensity is then the intensity od the spotlight at the current fragment
+
+Let;s see how we implement it!
+
+#+begin_src c
+float theta     = dot(lightDir, normalize(-light.direction));
+float epsilon   = light.cutOff - light.outerCutOff;
+float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
+...
+// we'll leave ambient unaffected so we always have a little light.
+diffuse  *= intensity;
+specular *= intensity;
+...
+
+#+end_src
+
+
+* [[https://learnopengl.com/Lighting/Multiple-lights][Chapter 2.6 - Multiple lights]]
+** Directional light
+
+#+begin_src c
+struct DirLight {
+    vec3 direction;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+uniform DirLight dirLight;
+
+
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
+{
+    vec3 lightDir = normalize(-light.direction);
+    // diffuse shading
+    float diff = max(dot(normal, lightDir), 0.0);
+    // specular shading
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    // combine results
+    vec3 ambient  = light.ambient  * vec3(texture(material.diffuse, TexCoords));
+    vec3 diffuse  = light.diffuse  * diff * vec3(texture(material.diffuse, TexCoords));
+    vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+    return (ambient + diffuse + specular);
+}
+#+end_src

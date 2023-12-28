@@ -1,0 +1,1095 @@
+#+TITLE:     OpenGL notes
+#+AUTHOR:    Om Deore
+#+LINK:      [[https://learnopengl.com/][Learn OpenGL]]
+
+* [[https://learnopengl.com/Getting-started/OpenGL][Chapter 1.1: OpenGL]]
+2023-09-21
+* OpenGL
+- OpenGL is graphics API that provides us with large functions that can be used to manipulate graphics & images.
+It isn't a library, its specification. Your graphics card manufacturer has its own implementations of OpenGL for ex. nvidia probably implemented OpenGL in their drivers.
+- It is used to control and command graphics card
+- Cross platform.
+
+* Immediate Mode (fixed function pipeline)
+In the old days, using OpenGL meant developing in immediate mode (often referred to as the fixed function pipeline) which was an easy-to-use method for drawing graphics. Most of the functionality of OpenGL was hidden inside the library and developers did not have much control over how OpenGL does its calculations. Developers eventually got hungry for more flexibility and over time the specifications became more flexible as a result; developers gained more control over their graphics. The immediate mode is really easy to use and understand, but it is also extremely inefficient. For that reason the specification started to deprecate immediate mode functionality from version 3.2 onwards and started motivating developers to develop in OpenGL's core-profile mode, which is a division of OpenGL's specification that removed all old deprecated functionality.
+
+* Core profile
+When using OpenGL's core-profile, OpenGL forces us to use modern practices. Whenever we try to use one of OpenGL's deprecated functions, OpenGL raises an error and stops drawing. The advantage of learning the modern approach is that it is very flexible and efficient. However, it's also more difficult to learn. The immediate mode abstracted quite a lot from the actual operations OpenGL performed and while it was easy to learn, it was hard to grasp how OpenGL actually operates. The modern approach requires the developer to truly understand OpenGL and graphics programming and while it is a bit difficult, it allows for much more flexibility, more efficiency and most importantly: a much better understanding of graphics programming.
+
+* Extensions
+A great feature of OpenGL is its support of _extension_. Whenever a graphics company comes up with a new technique or a new large optimization for rendering this is often found in an extension implemented in the drivers. If the hardware an application runs on supports such an extension the developer can use the functionality provided by the extension for more advanced or efficient graphics. This way, a graphics developer can still use these new rendering techniques without having to wait for OpenGL to include the functionality in its future versions, simply by checking if the extension is supported by the graphics card. Often, when an extension is popular or very useful it eventually becomes part of future OpenGL versions.
+
+The developer has to query whether any of these extensions are available before using them (or use an OpenGL extension library). This allows the developer to do things better or more efficient, based on whether an extension is available:
+
+#+begin_src c++
+if(GL_ARB_extension_name)
+{
+    // Do cool new and modern stuff supported by hardware
+}
+else
+{
+    // Extension not supported: do it the old way
+}
+#+end_src
+
+* State Machine
+OpenGL is by itself a large state machine: a collection of variables that define how OpenGL should currently operate.
+State of OpenGL is referred as OpenGL _context_. When using OpenGL, we often change its state by setting some options, manipulating some buffers and then render using the current context.
+Whenever we tell OpenGL that we now want to draw lines instead of triangles for example, we change the state of OpenGL by changing some context variable that sets how OpenGL should draw. As soon as we change the context by telling OpenGL it should draw lines, the next drawing commands will now draw lines instead of triangles.
+When working in OpenGL we will come across several _state-changing_ functions that change the context and several _state-using_ functions that perform some operations based on the current state of OpenGL
+
+* Objects
+An _object_ in OpenGL is a collection of options that represents a subset of OpenGL's state. For example, we could have an object that represents the settings of the drawing window; we could then set its size, how many colors it supports and so on. One could visualize an object as a C-like struct:
+
+#+begin_src cpp
+struct OpenGL_Context {
+  	...
+  	object_name* object_Window_Target;
+  	...
+};
+
+
+main()
+{
+    ...
+    // create object
+    unsigned int objectId = 0;
+    glGenObject(1, &objectId);
+    // bind/assign object to context
+    glBindObject(GL_WINDOW_TARGET, objectId);
+    // set options of object currently bound to GL_WINDOW_TARGET
+    glSetObjectOption(GL_WINDOW_TARGET, GL_OPTION_WINDOW_WIDTH,  800);
+    glSetObjectOption(GL_WINDOW_TARGET, GL_OPTION_WINDOW_HEIGHT, 600);
+    // set context target back to default
+    glBindObject(GL_WINDOW_TARGET, 0);
+    ...
+}
+#+end_src
+
+This little piece of code is a workflow you'll frequently see when working with OpenGL. We first create an object and store a reference to it as an id (the real object's data is stored behind the scenes). Then we bind the object (using its id) to the target location of the context (the location of the example window object target is defined as GL_WINDOW_TARGET). Next we set the window options and finally we un-bind the object by setting the current object id of the window target to 0. The options we set are stored in the object referenced by objectId and restored as soon as we bind the object back to GL_WINDOW_TARGET.
+The great thing about using these objects is that we can define more than one object in our application, set their options and whenever we start an operation that uses OpenGL's state, we bind the object with our preferred settings. There are objects for example that act as container objects for 3D model data (a house or a character) and whenever we want to draw one of them, we bind the object containing the model data that we want to draw (we first created and set options for these objects). Having several objects allows us to specify many models and whenever we want to draw a specific model, we simply bind the corresponding object before drawing without setting all their options again.
+
+
+
+* [[https://learnopengl.com/Getting-started/Creating-a-window][Chapter 1.2 - Creating a window]]
+- We have to create a window and OpenGL context (we want to call functions which will use OpenGL specifications to tell GPU what to do).
+- We also have to handle input.
+- for that we will use libraries such as GLFW, SDL, SFML, GLUT
+- change in plan, me using GLFW too
+
+* [[https://learnopengl.com/Getting-started/Hello-Window][Chapter 1.3 - Hello window]]
+** GLFW initialization
+We'd like to tell GLFW that 3.3 is the OpenGL version we want to use. This way GLFW can make the proper arrangements when creating the OpenGL context. This ensures that when a user does not have the proper OpenGL version GLFW fails to run. We set the major and minor version both to 3.
+
+
+#+begin_src cpp
+
+/* initializations of libraries */
+void init()
+{
+    /* GLFW init */
+    glfwInit();
+    /* sets limitations for versions of opengl */
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+
+
+
+
+}
+
+#+end_src
+
+** GLFWwindow
+We create pointer to GLFWwindow object, window is create by glfwCreateWindow();
+#+begin_src cpp
+    /* Create window */
+    GLFWwindow* window;
+
+    if (!(window = glfwCreateWindow(800, 600, "OpenGL", NULL, NULL)))
+    {
+        std::cout << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+
+        return -1;
+    }
+
+#+end_src
+
+** GLAD initialization
+- In the previous chapter we mentioned that GLAD manages function pointers for OpenGL so we want to initialize GLAD before we call any OpenGL function:
+- GLAD is a OpenGL *extension loader* library. This and similar libraries need a current context to load from.
+- So initialize these libraries after you call *glfwMakeContextCurrent(window)*.
+- We pass GLAD the function address of OpenGL function pointer's which is OS-specific.
+- glfwGetProcAddress(...) defines the correct function based on which OS we're compiling for.
+
+#+begin_src cpp
+/* GLAD init */
+if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+{
+    std::cout << "Failed to initialize GLAD" << std::endl;
+    return false;
+
+}
+
+#+end_src
+
+** Viewport
+- Before we can start render we have to do one last thing. We have to tell OpenGL the size of rendering window so OpenGL knows how we want to display the data and coordinates wrt the window.
+- We can set those dimensions via glViewport() function.
+- x, y be lower left corner of the window
+
+#+begin_src cpp
+//         x, y, wid, height
+glViewport(0, 0, 800, 600);
+#+end_src
+
+- We can actually set viewport dimensions at values smaller than GLFW window's dimensions; the all opengl rendering would be displayed in a smaller window and we could display other elements outside opengl viewport
+- However the moment we *resize the window* the viewport should be *adjusted* as well.
+- So for that we will we recall glViewport(...) function everytime window is resized.
+
+- If we want to be notified when the framebuffer of a window is resized, weather by user or system, set a size callback ie
+
+#+begin_src cpp
+// func declaration
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+
+// func defination
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
+
+/* in main */
+glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+#+end_src
+
+- We are telling glfw that when frame buffer size is changed call framebuffer_size_callback() function. So whenever its size is changed viewport will be changed accordingly
+
+** Keeping window up
+- We dont want application to execute once and quit immediately. We want it to keep drawing images and handle user input until the program has been explicitly told to stop. For this we use a while loop
+- glfwWindowShouldClose checks if window close event happened (ie x clicked or alt+F4)
+- glfwPollEvents checks if any events are triggered
+- glfwSwapBuffers will swap the color buffer (a large 2D buffer that contains color values for each pixel in GLFW's window) that is used to render to during this render iteration and show it as output to the screen.
+
+
+#+begin_src cpp
+while(!glfwWindowShouldClose(window))
+{
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+}
+
+#+end_src
+
+** Cleanup
+As we exit appLoop we will have to clean/delete all of GLFW's resources that were allocated.
+
+#+begin_src cpp
+/* main.cpp */
+glfwTerminate();
+return 0;
+#+end_src
+
+** Input
+- glfwGetKey(window, key)
+  returns true if key is currently being pressed.
+
+#+begin_src cpp
+
+void processInput(GLFWwindow* window)
+{
+  if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    glfwSetWindowShouldClose(window, true);
+}
+
+#+end_src
+
+** Rendering
+- We want to place all the rendering commands in renderloop(appLoop)
+- We want to clear the screen at start of every frame, otherwise we will see render from last frame on screen
+- for now we only care about the color buffer
+
+#+begin_src
+
+glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+glClear(GL_COLOR_BUFFER_BIT);
+
+#+end_src
+
+- here glClearColor is state setting function and glClear is state using function
+
+* [[https://learnopengl.com/Getting-started/Hello-Triangle][Chapter 1.4 - Hello Triangle]]
+** Graphics pipeline
+- In OpenGL everything is in *3D space*, but screen or window is a *2D array* of pixels so a large part of OpenGL's work is about *transforming all 3D coordinates to 2D pixels*.
+- The process of transforming 3D coordinates to 2D pixels is managed by the *graphics pipeline* of OpenGL.
+- Graphics pipeline of OpenGL can be divided into 2 large parts:
+  1. Transforms your 3D coords into 2D coords.
+  2. Transforms 2D coords into colored pixels.
+
+** Shaders introduction
+- Graphics pipeline takes *3D coords as input* and *transforms these to colored 2D pixels* on your screen.
+- Graphics pipeline can be divided into several steps as its input. All these steps are specialized (they have specific function) and can be easily executed *parallely*.
+- Because of their parallel nature graphics cards of today have thousands of small processing cores to quickly process your data within graphics pipeline.
+- The processing cores run *small programs* on the GPU for each step of the pipeline. These small programs are called *Shaders*.
+
+- Some of these shaders are configurable by the developer which allows us to write our own shaders to replace existing default shaders.
+- This gives us much more fine-grained control over specific parts of the pipeline and because they run on the GPU, they can also save us valuable CPU time.
+- Shaders are written in the *OpenGL Shading Language (GLSL)*.
+
+** Steps of pixel rendering
+- As input to graphics pipeline we pass in the list of three 3D coordinates that should form a triangle in an array here called *Vertex Data*.
+- This vertex data is collection of vertices. A vertex is collection of data per 3D coordinates.
+- Vertex data is represented using *vertex attribute* that _can contain any data we'd like_, but for simplicity's sake let's assume that each vertex consists of just a 3D position and some color value.
+
+  #+begin_quote
+In order for OpenGL to know what to make of your collection of coordinates and color values OpenGL requires you to hint what kind of render types you want to form with the data. Do we want the data rendered as a collection of points, a collection of triangles or perhaps just one long line? Those hints are called primitives and are given to OpenGL while calling any of the drawing commands. Some of these hints are *GL_POINTS, GL_TRIANGLES and GL_LINE_STRIP*.
+  #+end_quote
+
+- The first part of the pipeline is *vertex shader* that takes as input a single vertex.
+- The main purpose of the vertex shader is to transform 3D coordinates into different 3D coordinates (more on that later) and the vertex shader allows us to do some basic processing on the vertex attributes.
+- output of vertex shader is optionally passed to *geometry shader*.
+- geometry shader takes input a collection of vertices that form a primitive and has the ability to generate other shapes by emitting new vertices from new or other primitives.
+- The *primitive assembly* stage takes as input all the vertices (or vertex if GL_POINTS is chosen) from the vertex (or geometry) shader that form one or more primitives and assembles all the point(s) in the primitive shape given; in this case a triangle.
+- Output then passed to *rasterization stage* where it maps the resulting primitives to corresponding pixels on the final screen.
+  Resulting in *fragments for fragment shader* to use.
+- Before the fragment shaders run, *clipping* is performed.
+
+  #+begin_quote
+  Clipping discards all fragments that are outside your view, increasing performance.
+  #+end_quote
+
+  #+begin_quote
+  A fragment in OpenGL is all the data required for OpenGL to render a single pixel.
+  #+end_quote
+
+- Main purpose of *fragment shader*: Calculate the final color of pixel.
+  this is usually the stage where all the advanced OpenGL effects occur.
+- Usually the fragment shader contains data about the 3D scene that it can use to calculate the final pixel color (like lights, shadows, color of the light and so on).
+- After all the color values have been been determined final object will then pass through one more stage that we call the *alpha test an blending* stage.
+- This stage checks the corresponding depth value of the fragment and uses those to check if the object is in front or behind other object and renders accordingly.
+- Also checks for alpha values (opacity) and blends pixel colors.
+- In modern opengl we are required to define atleast vertex and fragment shader of our own.
+
+** Triangle
+*** Vertex Input
+step 1:
+- Give OpenGL some input vertex data in form of 3D coordinates.
+- OpenGL only processes 3D coordinates within range between -1.0 to 1.0 on all 3 axes
+- All coords withing this range are called *normalized device coordinates*.
+- We want to render a triangle so we take three coords
+- y axis points upward
+
+#+begin_src cpp
+float vertices[] = {
+    -0.5f, -0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+     0.0f,  0.5f, 0.0f
+};
+#+end_src
+
+- We want to send vertex as input to vertex Shader.
+- This is done by creating memory on the GPU where we _store vertex data_, _configure how OpengL should interpret the memory_ and specify _how to send the data to the graphics card_.
+- We manage this memory by so called *vertex buffer objects* (VBO) that can store large number of vertices in the GPU's memory.
+- Advantage of using those buffer objects is that we can send large batches of data all at once to the graphics card, and keep it there if there's enough space, without having to send data one vertex at a time.
+- Sending data from CPU to GPU is relatively slow, so wherever we can we try to send as much data as possible at once.
+- Once the data is in graphics card's memory the vertex shader has almost instant access to the vertices making it extremely fast.
+
+- A VBO is OpenGL object. It has unique ID corresponding to that buffer, so we can generate one with a buffer ID using glGenBuffers() function.
+- if u pass pointer to array of ints, it will create that many buffer objects.
+
+#+begin_src cpp
+
+unsigned int VBO;
+glGenBuffers(1, &VBO);
+
+#+end_src
+
+- OpenGL has many types of buffer objects and the type of a *vertex buffer object* is *GL_ARRAY_BUFFER*
+- OpenGL allows us to *bind to several buffers at once* as long as they have a *different buffer type*.
+
+so,
+1. generate buffer glGenBuffers();
+2. bind buffer to a OpenGL buffer object glBindBuffer();
+3. copy user defined data into the currently bounded buffer glBufferData();
+4. Proecss data using shaders
+
+Now we stored the vertex data within memory on the graphics card as managed by a vertex buffer object named VBO.
+Next we want to create *a vertex and fragment* shader that actually processes this data.
+
+#+begin_src cpp
+
+unsigned int VBO;
+glGenBuffers(1, &VBO);
+
+glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+#+end_src
+
+*** Vertex Shader
+We need to write the vertex shader and then compile it so we can use it in our application.
+
+#+begin_src glsl
+
+#version 330 core
+layout (location = 0) in vec3 aPos;
+
+void main()
+{
+    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+}
+
+#+end_src
+
+- Each shader begins with declaration of its version. Since OpenGL 3.3 and higher the version numbers of GLSL match the version of OpenGL (GLSL version 420 corresponds to OpenGL version 4.2). We also explicitly mention we are using core profile.
+- Next we declare all the input vertex attributes in the vertex shader with *in* keyword.
+- Since each vertex Has 3 coordinates we create a vec3 input variable with name aPos; We also specifically set the location of the input variable via =layout (location = 0)=.
+- To set the output of the vertex shader we have to assign the possition data to the *predefined gl_Position* variable which is a vec4 behind the scenes. At the end of the =main= fuction, whatever we set gl_Position to will be used as the output of the vertex shader. Since our input is vector of size 3 we have to cast this to a vector of size 4.
+- This is simplest vertex shader, we are taking input from VBO, not doing any processing and passing output to next step in variable gl_Position.
+
+*** Compilinf a shader
+- We take the source code for the vertex shader and store it in a *const C string* at the top of the code file for now:
+- In order for openGL to use the shader it has to dynamically compile it at run-time from its source code.
+- We want to create a shader object referenced by an ID. So we store the vertex shader as an unsigned int and create the shader with glCreateShader
+
+#+begin_src cpp
+const char *vertexShaderSource = "#version 330 core\n"
+    "layout (location = 0) in vec3 aPos;\n"
+    "void main()\n"
+    "{\n"
+    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+    "}\0";
+
+/* in main.cpp */
+unsigned int vertexShader;
+vertexShader = glCreateShader(GL_VERTEX_SHADER);
+
+#+end_src
+
+- glCreateShader returns shader id of which evert shader we tell to the uint. Now we attach the shader source code to the shader object and compile the shader:
+
+#+begin_src cpp
+glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+glCompileShader(vertexShader);
+#+end_src
+
+- glShaderSource() function takes the shader object to as its first arguement. The second arguement specifies how many strings we're passing as source code, which is only one. The third parameter is the actual source code of the vertex shader and we can leave the 4th parameter to NULL.
+
+- To check for errors use glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+
+- Compile status will be saved in int success that we passed.
+- to get error message do
+
+#+begin_src cpp
+int  success;
+char infoLog[512];
+glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+
+if(!success)
+{
+    glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+    std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+}
+#+end_src
+
+*** Fragment Shader
+Fragment shader is all about calculating the color output of your pixel.
+
+#+begin_src glsl
+#version 330 core
+out vec4 FragColor;
+
+void main()
+{
+    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+}
+#+end_src
+
+- The fragment shader only requires one output variable and that is a vector of size 4 that defines the final color output that we should calculate ourselves.
+- We can declare output values with out keyword, that we here promptly named FragColor. Next we simply assign a vec4 to the color output as an orange color with an alpha values of 1.0
+- Compile this shader similar to vertex shader.
+
+*** Shader Program
+- A shader program object is the final linked version of multiple shaders combined. To use the recently compiled shaders we have to *link* them to a *shader program object* and then activate this shader program when rendering objects.
+- The *activated* shader program's shader will be used when we issue render calls.
+- When linking the shaders into a program it links the *outputs of each shader to the inputs of the next shader*. This is also where you will get linking errors if your outputs and inputs do not match.
+
+#+begin_src cpp
+unsigned int shaderProgram = glCreateProgram();
+#+end_src
+
+- the glCreateProgram function creates a program and returns the ID reference to the newly created program object. Now we need to attach the privously compiled shaders to he program object and then link them with glLinkProgram.
+
+
+#+begin_src cpp
+glAttachShader(shaderProgram, vertexShader);
+glAttachShader(shaderProgram, fragmentShader);
+glLinkProgram(shaderProgram);
+
+glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+if(!success)
+{
+    glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+}
+#+end_src
+
+- the result is a program object that we can activate by calling glUseProgram with newly created program objcet as its arguement:
+  glUseProgram(shaderProgram);
+- Every shader and rendering call after glUseProgram will now use this program object (and thus the shaders).
+- Once we link shader objects into the program we no longer need them anymore, so its ok to delete them.
+
+#+begin_src cpp
+glDeleteShader(vertexShader);
+glDeleteShader(fragmentShader);
+#+end_src
+
+- now we sent the input vertex data to the gpu and instructed the gpu how it should process the vertex data within a vertex and fragment shader. We've added instructions what gpu should do with the data but yet we haven't told gpu where to get this data
+
+
+*** Linking Vertex Attributes
+The vertex shader allows us to specify any input we want in the form of vertex attributes and while this allows for great flexibility, it does mean we have to manually specify what part of our input data goes to which vertex attribute in the vertex shader. This meas we have to specify how OpenGL should interpret the vertex data before rendering.
+
+our vertex buffer data is formatted as array of 9 floats of size 4 byte
+- The position is stored as 32-bit floating point values.
+- Each position is composed of 3 values.
+- There is no space between each set of 3 values. The values are tightly packed in the array.
+- The first value in the data is at the beginning of the buffer.
+
+  with this knowledge we can tell OpenGL how it should interpret the vertex data (per vertex attribute) using glVertexAttribPointer:
+
+#+begin_src cpp
+
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3* sizeof(float), (void*)0);
+glEnableVertexAttribArray(0);
+
+#+end_src
+
+
+- This function has to be called when buffer is bounded
+- This function tell openGL layout of the data in VBO
+
+#+begin_quote
+Each vertex attribute takes its data from memory managed by a VBO and which VBO it takes its data from (you can have multiple VBOs) is *determined by the VBO currently bound to GL_ARRAY_BUFFER* when calling glVertexAttribPointer. Since the previously defined VBO is still bound before calling glVertexAttribPointer vertex attribute 0 is now associated with its vertex data.
+#+end_quote
+
+Drawing an object in OpenGL would look something like this:
+#+begin_src cpp
+
+// 0. copy our vertices array in a buffer for OpenGL to use
+glBindBuffer(GL_ARRAY_BUFFER, VBO);
+glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+// 1. then set the vertex attributes pointers
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+glEnableVertexAttribArray(0);
+// 2. use our shader program when we want to render an object
+glUseProgram(shaderProgram);
+// 3. now draw the object
+someOpenGLFunctionThatDrawsOurTriangle();
+
+#+end_src
+
+*** Vertex Array Object
+A =vertex array object= (VAO) can be bound just like a vertex buffer object and any subsequent vertex attribute calls from that point on will be store inside VAO. This has advantage that when configuring vertex attribute pointers you only have to make those cals once and whenever we want to draw the object, we can just bind the corresponding VAO.
+This makes switching between different vertex data and attribute configuration as easy as binding a different VAO.
+
+process to generate VAO is similar to that of VBO:
+
+#+begin_src cpp
+unsigned int VAO;
+glGenVertexArrays(1, &VAO);
+glBindVertexArray(VAO);
+#+end_src
+
+[[https://www.youtube.com/watch?v=Rin5Cp-Hhj8][better explanation]]
+
+*** Drawing Object
+To draw opengl provides us with the glDrawArrays function that draws primitives using the *currently active shader*, the previously defined vertex attribute configuration and with the *VBOs vertex data (indirectly bound via the VAO)*;
+
+#+begin_src
+glUseProgram(shaderProgram);
+glBindVertexArray(VAO);
+glDrawArrays(GL_TRIANGLES, 0, 3);
+
+#+end_src
+
+glDrawArrays() takes first arguement of predefined primitive type we would like to draw.
+Second arguement specifies the starting index of the vertex array we'd like to draw.
+last argument is how many vertices we want to draw.
+
+compil and run and you get a triangle!
+
+** Two Triangles
+So for one triangle we need one VAO. To render second triangle we will have to bind VAO2 and again call glDrawArrays coz glDrawArrays only work with currently binded VAO
+
+Hence we need efficient method
+
+*** Element Buffer Objects
+Firstly we only store unique vertices and then we assign indices to triangle which will be used to choose we vertex we want to choose.
+
+EBO is a buffer just like a VBO, that stores indices that openGL uses to decide what vertices to draw.
+
+#+begin_quote
+So, VBO and EBO are like children of VAO, ie we first bind VAO and then VBO/EBO and unbind EBO first and then VAO so it doesn't throw errors.
+#+end_quote
+
+
+
+#+begin_src cpp
+unsigned int EBO;
+glGenBuffers(1, &EBO);
+glBindBuffer(EBO)
+glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+/* To draw stuff */
+glBindVertexArray(VAO);
+glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+#+end_src
+
+
+* [[https://learnopengl.com/Getting-started/Shaders][Chapter 1.4 - Shaders]]
+Shaders are little programs that rest on the GPU. These programs are run for each specific section of the graphics pipeline.
+Shaders take input, process it and passes output to next shader/ program.
+Shaders communicate with eachother via input and output only.
+
+** GLSL
+Shaders are written in C-like language GLSL.
+GLSL is tailored for use with graphics and contain useful features specifically targeted at vector and matrix manipulation.
+
+Shaders always begin with a version declaration, followed by a list of input and output variables, uniorms and main function.
+
+#+begin_src c
+
+#version version_number
+in type in_variable_name;
+in type in_variable_name;
+
+out type out_variable_name;
+
+uniform type uniform_name;
+
+void main()
+{
+  // process input(s) and do some weird graphics stuff
+  ...
+  // output processed stuff to output variable
+  out_variable_name = weird_stuff_we_processed;
+}
+
+#+end_src
+
+- when we are talking about the vertex shader each input variable s also known as *vertex attributes*
+- There is a maximum number of vertex attributes we're allowed to declare limited by the hardware. There are always at least 16 4-component vertex attributes available
+  #+begin_src cpp
+    /* use this to get how many vertex attributes are supported */
+    int n;
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &n);
+    std::cout << n << std::endl;
+  #+end_src
+
+** Data Type
+support basic types we know like int, float, double, uint and bool.
+Also supports two container types namely vectors and matrices.
+
+*** Vector
+A vector in GLSL is 2 to 4 component container
+
+Vector can be of any data type
+- vecn: default vector of n floats
+- bvecn: vector of n boolean
+- ivecn: vector of n int
+- uvecn: vector of n uint
+- dvecn: vector of n double
+
+Mostly we'll be using basic vecn
+components of vec can be accessed by vec.x, vec.y, vec.z, vec.w.
+
+#+begin_src c
+vec2 someVec;
+vec4 differentVec = someVec.xyxx;
+vec3 anotherVec = differentVec.zyw;
+vec4 otherVec = someVec.xxxx + anotherVec.yxzy;
+
+#+end_src
+
+following syntax also works
+
+#+begin_src c
+vec2 vect = vec2(0.5, 0.7);
+vec4 result = vec4(vect, 0.0, 0.0);
+vec4 otherResult = vec4(result.xyz, 1.0);
+
+#+end_src
+
+** Ins and outs
+We want to have inputs and outputs on the individual shaders so that we can move stuff around. GLSL defined the in and out keyword for that purpose.
+Each shader can specify ins and outs using those keywords and whatever an output variable maches with an input variable of the next shader stage the
+
+- Vertex shader *should* recive some form of input otherwise it would be pretty ineffective.
+- it receives its input straight from the vertex data.
+- To define how the vertex data is organized we specify the input variables with location metadata so we can configure the vertex attributes on the CPU.
+- =layout (location = 0)= is used for this.
+
+- The other exception is that the fragment shader requires a vec4 color output variable since fragment shader needs to generate a final output color.
+- We can send data to fragment shader from vertex shader by
+
+** Uniforms
+*Uniforms* are other way to pass data from our application on the CPU to the shader on the GPU.
+Uniforms are however slightly different compared to vertex attributes.
+All uniforms are *global*.
+
+U once declare it and you can use it in any shader, it wont change its value until you reset or update it.
+#+begin_src c
+
+#version 330 core
+out vec4 FragColor;
+
+uniform vec4 ourColor; // we set this variable in the OpenGL code.
+
+void main()
+{
+    FragColor = ourColor;
+}
+
+#+end_src
+
+How do you update it?
+For that first you need to find the index/location of the uniform attribute in our shader.
+Then we can update it.
+
+#+begin_src cpp
+float timeValue = glfwGetTime();
+float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
+int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+glUseProgram(shaderProgram);
+glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+
+#+end_src
+
+ - glfwGet() return time passed since execution started.
+ - glGetUniformLocation() takes shader program and uniform variable name and return id of that uniform
+ - glUniform4f() takes uniformID, vec4 values
+
+As you can see, uniforms are a useful tool for setting attributes that may change every frame, or for interchanging data between your application and your shaders
+
+
+** Fragment Interpolation
+since we only supplied 3 colors, not the huge color palette we're seeing right now. This is all the result of something called *fragment interpolation* in the fragment shader.
+When rendering a triangle the rasterization stage usually results in a lot more fragments than vertices originally specified. The rasterizer then determines the positions of each of those fragments based on where they reside on the triangle shape.
+Based on these positions, it interpolates all the fragment shader's input variables. Say for example we have a line where the upper point has a green color and the lower point a blue color. If the fragment shader is run at a fragment that resides around a position at 70% of the line, its resulting color input attribute would then be a linear combination of green and blue; to be more precise: 30% blue and 70% green.
+This is exactly what happened at the triangle. We have 3 vertices and thus 3 colors, and judging from the triangle's pixels it probably contains around 50000 fragments, where the fragment shader interpolated the colors among those pixels. If you take a good look at the colors you'll see it all makes sense: red to blue first gets to purple and then to blue. Fragment interpolation is applied to all the fragment shader's input attributes.
+
+** Our Own Shader Class.
+we create a shader class which consist of our both vertexShader and fragmentShader
+It reads both shaders from .shader files.
+It consists of
+- shader program id
+- constructor
+- use() method
+
+functions to modify uniforms.
+- setBool() method
+- setInt()
+- setFloat()
+
+* [[https://learnopengl.com/Getting-started/Textures][Chapter 1.6 - Textures]]
+A *texture* is a 2D image (can also be 1D or 3D) used to add detail to an object.
+Next to images, textures can also be used to store a large collection of arbitrary data to send to the shaders, but we'll leave that for a different topic.
+
+In order to map a texture to the triangle we need to tell each vertex of the triangle which part of the texture it corresponds to. Each vertex should thus have a *texture coordinate* associated with them that specifies what part of the texture image to sample from. *Fragment interpolation* does rest for the other fragments.
+
+Texture coordinates range from 0 to 1 in both axes. Retrieving the texture color using texture coordinates is caled *sampling*. The texture coordinate starts (0, 0) at bottom left corner and (1, 1) is at upper right corner.
+
+we specify 3 texCoord points for the triangle.
+Texture sampling has a loose interpretation and can be done in many different ways. It is thus our job to tell OpenGL how it should sample its textures.
+
+#+begin_src cpp
+float texCoords[] = {
+    0.0f, 0.0f,  // lower-left corner
+    1.0f, 0.0f,  // lower-right corner
+    0.5f, 1.0f   // top-center corner
+};
+
+#+end_src
+
+** Texture Wrapping
+Texture coordinates usually range from (0,0) to (1,1) but what happens if we specify coordinates outside this range? The default behavior of OpenGL is to repeat the texture images (we basically ignore the integer part of the floating point texture coordinate), but there are more options OpenGL offers:
+
+- =GL_REPEAT=: The default behavior for textures. Repeats the texture image.
+- =GL_MIRRORED_REPEAT=: Same as GL_REPEAT but mirrors the image with each repeat.
+- =GL_CLAMP_TO_EDGE=: Clamps the coordinates between 0 and 1. The result is that higher coordinates become clamped to the edge, resulting in a stretched edge pattern.
+- =GL_CLAMP_TO_BORDER=: Coordinates outside the range are now given a user-specified border color.
+
+Each of the aforementioned options can be set per coordinate axis (s, t (and r if you're using 3D textures) equivalent to x,y,z) with the glTexParameter* function:
+
+#+begin_src cpp
+
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+
+#+end_src
+
+** Texture Filtering
+exture coordinates do not depend on resolution but can be any floating point value, thus OpenGL has to figure out which texture pixel (also known as a *texel* ) to map the texture coordinate to.
+This becomes especially important if you have a very large object and a low resolution texture. You probably guessed by now that OpenGL has options for this texture filtering as well. There are several options available but for now we'll discuss the most important options: =GL_NEAREST= and =GL_LINEAR=.
+
+
+=GL_NEAREST= (also known as nearest neighbor or point filtering) is the default texture filtering method of OpenGL. When set to GL_NEAREST, OpenGL selects the texel that center is closest to the texture coordinate. Below you can see 4 pixels where the cross represents the exact texture coordinate.
+
+=GL_LINEAR= (also known as (bi)linear filtering) takes an interpolated value from the texture coordinate's neighboring texels, approximating a color between the texels. The smaller the distance from the texture coordinate to a texel's center, the more that texel's color contributes to the sampled color.
+
+
+#+begin_src cpp
+
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+#+end_src
+
+
+** Mipmaps
+*mipmaps* is basically a collection of texture images where each subsequent texture is twice as small compared to the previous one. The idea behind mipmaps should be easy to understand: after a certain distance threshold from the viewer, OpenGL will use a different mipmap texture that best suits the distance to the object. Because the object is far away, the smaller resolution will not be noticeable to the user.
+OpenGL is then able to sample the correct texels, and there's less cache memory involved when sampling that part of the mipmaps.
+Creating a collection of mipmapped textures for each texture image is cumbersome to do manually, but luckily OpenGL is able to do all the work for us with a single call to glGenerateMipmap after we've created a texture.
+When switching between mipmaps levels during rendering OpenGL may show some artifacts like sharp edges visible between the two mipmap layers. Just like normal texture filtering, it is also possible to filter between mipmap levels using NEAREST and LINEAR filtering for switching between mipmap levels. To specify the filtering method between mipmap levels we can replace the original filtering methods with one of the following four options:
+
+- GL_NEAREST_MIPMAP_NEAREST: takes the nearest mipmap to match the pixel size and uses nearest neighbor interpolation for texture sampling.
+- GL_LINEAR_MIPMAP_NEAREST: takes the nearest mipmap level and samples that level using linear interpolation.
+- GL_NEAREST_MIPMAP_LINEAR: linearly interpolates between the two mipmaps that most closely match the size of a pixel and samples the interpolated level via nearest neighbor interpolation.
+- GL_LINEAR_MIPMAP_LINEAR: linearly interpolates between the two closest mipmaps and samples the interpolated level via linear interpolation.
+
+Just like texture filtering we can set the filtering method to one of the 4 aforementioned methods using glTexParameteri:
+
+#+begin_src cpp
+
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+#+end_src
+A common mistake is to set one of the mipmap filtering options as the magnification filter. This doesn't have any effect since mipmaps are primarily used for when textures get downscaled: texture magnification doesn't use mipmaps and giving it a mipmap filtering option will generate an OpenGL GL_INVALID_ENUM error code.
+
+** Loading and craeting textures
+TO load image we will use stb_image.h library
+to load image call stbi_load() function which returns a unsigned char*
+
+#+begin_src cpp
+int width, height, nrChannels;
+unsigned char *data = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+#+end_src
+
+this function sets values to width, height and number of color channels in file
+
+** Generating a texture
+textures are also referenced by an id, so
+
+#+begin_src cpp
+unsigned int tex;
+glGenTextures(1, &tex);
+
+glBindTexture(GL_TEXTURE_2D, tex);
+#+end_src
+
+Now that the texture is bound, we can start generating a texture using the previously loaded image data. Textures are generated with glTexImage2D
+
+#+begin_src cpp
+
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+glGenerateMipmap(GL_TEXTURE_2D);
+
+stbi_image_free(data);
+
+#+end_src
+
+glTexImage2D() paramets
+
+- The first argument specifies the texture target; setting this to GL_TEXTURE_2D means this operation will generate a texture on the currently bound texture object at the same target (so any textures bound to targets GL_TEXTURE_1D or GL_TEXTURE_3D will not be affected).
+- The second argument specifies the mipmap level for which we want to create a texture for if you want to set each mipmap level manually, but we'll leave it at the base level which is 0.
+- The third argument tells OpenGL in what kind of format we want to store the texture. Our image has only RGB values so we'll store the texture with RGB values as well.
+- The 4th and 5th argument sets the width and height of the resulting texture. We stored those earlier when loading the image so we'll use the corresponding variables.
+- The next argument should always be 0 (some legacy stuff).
+- The 7th and 8th argument specify the format and datatype of the source image. We loaded the image with RGB values and stored them as chars (bytes) so we'll pass in the corresponding values.
+- The last argument is the actual image data.
+
+Once glTexImage2D is called, the currently bound texture object now has the texture image attached to it.
+However, currently it only has the base-level of the texture image loaded and if we want to use mipmaps we have to specify all the different images manually (by continually incrementing the second argument) or, we could call *glGenerateMipmap* after generating the texture. This will automatically generate all the required mipmaps for the currently bound texture.
+
+** Applying textures
+now that we have loaded texture in memory, its time to tell openGL how to apply it.
+
+#+begin_src cpp
+float vertices[] = {
+    // positions          // colors           // texture coords
+     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,
+     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,
+    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f
+};
+#+end_src
+
+For texture coordinates we will introduce another attribute
+Note that we will have to change stride size in every attribute
+
+#+begin_src cpp
+glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8* sizeof(float), (void*) (6*sizeof(float)));
+glEnableVertexAttribArray(2);
+#+end_src
+
+now vertex shader
+#+begin_src c
+
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+layout (location = 2) in vec2 aTexCoord;
+
+out vec3 ourColor;
+out vec2 TexCoord;
+
+void main()
+{
+    gl_Position = vec4(aPos, 1.0);
+    ourColor = aColor;
+    TexCoord = aTexCoord;
+}
+
+#+end_src
+
+#+begin_src cpp
+
+glBindTexture(GL_TEXTURE_2D, texture);
+glBindVertexArray(VAO);
+glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+#+end_src
+
+** Texture units
+You probably wondered why the sampler2D variable is a uniform if we didn't even assign it some value with glUniform.
+Using glUniform1i we can actually assign a location value to the texture sampler so we can set multiple textures at once in a fragment shader.
+This location of a texture is more commonly known as a *texture unit*. The default texture unit for a texture is 0 which is the default active texture unit so we didn't need to assign a location in the previous section
+The main purpose of texture units is to allow us to use more than 1 texture in our shaders
+By assigning texture units to the samplers, we can bind to multiple textures at once as long as we activate the corresponding texture unit first. Just like glBindTexture we can activate texture units using glActiveTexture passing in the texture unit we'd like to use:
+
+#+begin_src cpp
+glActiveTexture(GL_TEXTURE0); // activate the texture unit first before binding texture
+glBindTexture(GL_TEXTURE_2D, texture);
+#+end_src
+
+
+* [[https://learnopengl.com/Getting-started/Transformations][Chapter 1.7 - Transformations]]
+We now know how to create objects and color them, now time to move them
+
+** scaling:
+We scale a vectors magnitude by multiplying it with matrix
+
+| s1  0  0  0 |   | x |   | s1*x |
+| 0 s2  0  0  | * | y | = | s2*y |
+| 0  0 s3  0  |   | z |   | s3*z |
+| 0  0  0  0  |   | 0 |   | 0    |
+
+** Translating
+| 0  0  0 t1 |   | x |   | x+t1 |
+| 0  0  0 t2 | * | y | = | y+t2 |
+| 0  0  0 t3 |   | z |   | z+t3 |
+| 0  0  0  0 |   | 0 |   | 0    |
+
+overall
+#+begin_src cpp
+vec = trans * scale * vec;
+#+end_src
+
+** GLM
+includes
+#+begin_src cpp
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#+end_src
+
+TO make a transformation matrix start with a identity matrix.
+=glm::mat4 tran = glm::mat4(1.0f);=
+
+After identity matrix we have to make it transform matrix.
+for this glm have provided us with =glm::translate, glm::scale, glm::rotate= functions
+
+* [[https://learnopengl.com/Getting-started/Coordinate-Systems][Chapter 1.8 - Coordinate System]]
+- In last chapter we saw how we can use matrices to trasform vertices.
+- OpenGL expects all the vertices, that we want to become visible to be in normalized device coords after each vertex shader run.
+- So all coords have to be in -1 to 1.
+- What we usually do, is specify the coordinates in a range (or space) we determine ourselves and in the vertex shader transform these coordinates to normalized device coordinates (NDC).
+- Transforming coordinates to NDC is usually accomplished in a step-by-step fashion where we transform an object's vertices to several coordinate systems before finally transforming them to NDC.
+- The advantage of transforming them to several intermediate coordinate systems is that some operations/calculations are easier in certain coordinate systems as will soon become apparent.
+- There are a total of 5 different coordinate systems that are of importance to us:
+  1. Local space (or Object space)
+  2. World space
+  3. View space (or Eye space)
+  4. Clip space
+  5. Screen space
+    Those are all a different state at which our vertices will be transformed in before finally ending up as fragments.
+
+** Global Picture
+To transform the coordinates from one space to the next coordinate space we'll use *several transformation matrices* of which the most important are the *model, view and projection matrix*. Our vertex coordinates first start in local space as local coordinates and are then further processed to world coordinates, view coordinates, clip coordinates and eventually end up as screen coordinates. The following image displays the process and shows what each transformation does
+
+Local Space -> world space -> view space -> clip space -> screen space
+    Model Matrix-> view matrix -> projection -> viewport transform
+
+1. *Local coords* -> coords of object relative to origin
+2. The next step is to transform local coords to *world space coords* which are coords in resp to larger world. These coords are relative to some *global origin* of the world, together with many other objects also placed relative to this world's origin.
+3. Next we transform the *world coordinates* to *view-space coordinates* in such a way that each coordinate is *as seen from the camera or viewer's point of view*
+4. After the coordinates are in view space we want to *project them to clip coordinates*. Clip coordinates are processed to the *-1.0 and 1.0 range* and determine which vertices will end up on the screen
+5. And lastly we transform the clip coordinates to screen coordinates in a process we call viewport transform that transforms the coordinates from *-1.0 and 1.0* to the coordinate range defined by =glViewport=. The resulting coordinates are then sent to the rasterizer to turn them into fragments
+
+** Orthographic Projection
+- An orthographic projection matrix defines a *cube-like frustum box that defines the clipping space* where each vertex outside this box is clipped.
+  When creating an orthographic projection matrix we specify the *width, height and length of the visible frustum*. All the coordinates inside this frustum will end up within the NDC range after transformed by its matrix and thus won't be clipped. The frustum looks a bit like a container
+- The frustum defines the visible coordinates and is specified by a *width, a height and a near and far plane*. Any coordinate in front of the near plane is clipped and the same applies to coordinates behind the far plane. The orthographic frustum directly maps all coordinates inside the frustum to normalized device coordinates without any special side effects since it won't touch the w component of the transformed vector; if the w component remains equal to 1.0 perspective division won't change the coordinates.
+- To create an orthographic projection matrix we make use of GLMs built in function glm::ortho
+
+#+begin_src cpp
+    glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f);
+#+end_src
+
+- The first two paramets specify the left and right coordinate of the frustum and the third and fourth parameter specify the bottom and top part of the frustum.
+- With those four points we've defined the size of the near and far planes and the 5th and 6th paramenter define the distance between the near and far plane.
+- This specific projection matrix transforms all coordinates between these x, y and z range values to normalized device coordinates.
+
+- An orthographic projection matrix *directly maps coordinates to the 2D plane that is your screen*, but in reality a direct projection produces unrealistic results since the projection doesn't take perspective into account. That is something the _perspective projection matrix_ fixes for us.
+
+** Projection matrix;
+due to perspective the lines seem to coincide at a far enough distance. This is exactly the effect perspective projection tries to mimic and it does so using a perspective projection matrix
+
+#+begin_src cpp
+glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width/(float)height, 0.1f, 100.0f);
+#+end_src
+
+** Putting all together
+We create a transformation matrix for each of the aforementioned steps: *model, view and projection* matrix. A vertex coordinate is then transformed to clip coordinates as follows.
+
+#+begin_quote
+Vclip = Mprojection x Mview x Mmodel x Vlocal
+#+end_quote
+
+Note that order of matrix multiplication is reversed(remember that we need to read matrix multiplication from right to left).
+Resultant vertex should be assigned to gl_Position in the vertex shader and OpenGL will then automatically perform perspective division and clipping.
+
+#+begin_quote
+The output of the vertex shader requires the coordinates to be in clip-space which is what we just did with the transformation matrices. OpenGL then performs perspective division on the clip-space coordinates to transform them to normalized-device coordinates. OpenGL then uses the parameters from glViewPort to map the normalized-device coordinates to screen coordinates where each coordinate corresponds to a point on your screen (in our case a 800x600 screen). This process is called the viewport transform.
+#+end_quote
+
+** Going 3D
+To start drawing in 3D we'll first create a *model matrix*. The model matrix *consists of translations, scaling and/or rotations* we'd like to apply to transform all object's vertices to the global world space. Let's transform our plane a bit by rotating it on the x-axis so it looks like it's laying on the floor. The model matrix then looks like this:
+
+#+begin_src cpp
+glm::mat4 model = glm::mat4(1.0f);
+model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+#+end_src
+
+ Next we need to create a *view matrix*. We want to move slightly backwards in the scene so the object becomes visible (when in world space we're located at the origin (0,0,0)). To move around the scene, think about the following:
+
+- To move a camera backwards, is the same as moving the entire scene forward.
+
+#+begin_src cpp
+
+glm::mat4 view = glm::mat4(1.0f);
+// note that we're translating the scene in the reverse direction of where we want to move
+view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+
+#+end_src
+
+The last thing we need to define is the projection matrix. We want to use perspective projection for our scene so we'll declare the projection matrix like this:
+
+#+begin_src cpp
+glm::mat4 projection;
+projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
+
+#+end_src
+
+* [[https://learnopengl.com/Getting-started/Camera][Chapter 1.9 - Camera]]
+** Camera/view space
+We can use view matrix to move around the scene.
+When we're talking about camera/view space we're talking about *all the vertex coordinates as seen from the camera's perspective as the origin* of the scene:
+
+#+begin_quote
+The view matrix transforms all the world coordinates into view coords that are relative to camera position and direction
+#+end_quote
+
+To define a camera we need *its position in world space, the direction its looking at, a vector pointing to the right and pointing upwards from the camera*.
+
+*** Camera Position
+The camera position is a vector in world space that points to the camera's position.
+We set the camera at the same position we've set the camera in previous chapter
+
+#+begin_src cpp
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+#+end_src
+
+*** Camera direction
+The next vector required is the camera's direction ie what direction it is pointing at. For now say camera pointing at origin (0,0,0)
+
+we get this direction by subtracting position vector from origin
+
+#+begin_src cpp
+glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
+#+end_src
+
+*** Right axis
+#+begin_src cpp
+glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+#+end_src
+
+*** up axis
+#+begin_src cpp
+glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
+#+end_src
+
+** Look at
+A great thing about matrices is that if you define a coordinate space using 3 perpendicular (or non-linear) axes you can create a matrix with this matrix with those 3 axex plus a translation vector and you can transform any vector to that coordinate space by multiplying it with this matrix.
+This is exactly what the /lookat/ matrix does and now that we have 3 perpendicular axes and a position vector to define the camera space we can create our own lookat matrix
+
+#+begin_src cpp
+LookAt = {                      {
+         { Rx, Ry, Rz, 0 },     {  0,  0,  0, -Px  },
+         { Ux, Uy, Uz, 0 },  *  {  0,  0,  0, -Py  },
+         { Dx, Dy, Dz, 0 },     {  0,  0,  0, -Pz  },
+         {  0,  0,  0, 0 }      {  0,  0,  0,   0  }
+         }                      }
+
+#+end_src
+
+Implementation
+#+begin_src cpp
+glm::mat4 view;
+view = glm::lookAt( glm::vec3(0.0f, 0.0f, 3.0f),
+                    glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 1.0f, 0.0f));
+
+#+end_src
+
+glm::lookAt function takes
+    view position
+    where we are looking at
+    up axis wrt camera
+
+** Walk Around
+we declare few camera variables which will help us
+#+begin_src cpp
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+#+end_src
+
+** Movement Speed
+CUrrently we used a constant value for movemen speed when walking around.
+Graphics applications and games usually keep track of a *delta time* variable that store the time it took to *render last frame*
+
+** Look Around
+- Euler angles
+  three values telling rotation around x, y, z values resp.
+
+** CAMERA CLASS
